@@ -12,10 +12,12 @@ type Machine = {
 export default function Home() {
   const [machines, setMachines] = useState<Machine[]>([])
   const [isAuthed, setIsAuthed] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setIsAuthed(!!data.session)
+      setLoading(false)
       if (data.session) loadMachines()
     })
 
@@ -39,10 +41,25 @@ export default function Home() {
     setMachines(res.data || [])
   }
 
+  if (loading) {
+    return <p style={{ padding: 20 }}>Загрузка…</p>
+  }
+
   if (!isAuthed) {
     return (
       <main style={{ padding: 20 }}>
-        <h1>Вход выполните через страницу станка</h1>
+        <h1>Производственный план</h1>
+        <p>Для работы необходимо войти</p>
+
+        <button
+          onClick={() =>
+            supabase.auth.signInWithOAuth({
+              provider: 'google'
+            })
+          }
+        >
+          Войти
+        </button>
       </main>
     )
   }
