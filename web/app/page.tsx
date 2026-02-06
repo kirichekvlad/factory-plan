@@ -12,18 +12,22 @@ type Machine = {
 export default function Home() {
   const [machines, setMachines] = useState<Machine[]>([])
   const [isAuthed, setIsAuthed] = useState(false)
-  const [loading, setLoading] = useState(true)
+
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [status, setStatus] = useState<string>('')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      setIsAuthed(!!data.session)
-      setLoading(false)
-      if (data.session) loadMachines()
+      const authed = !!data.session
+      setIsAuthed(authed)
+      if (authed) loadMachines()
     })
 
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      setIsAuthed(!!session)
-      if (session) loadMachines()
+      const authed = !!session
+      setIsAuthed(authed)
+      if (authed) loadMachines()
       else setMachines([])
     })
 
@@ -41,42 +45,64 @@ export default function Home() {
     setMachines(res.data || [])
   }
 
-  if (loading) {
-    return <p style={{ padding: 20 }}>Загрузка…</p>
+  const signIn = async () => {
+    setStatus('Входим...')
+    const res = await supabase.auth.signInWithPassword({
+      email,
+      password
+    })
+
+    if (res.error) setStatus('Ошибка: ' + res.error.message)
+    else setStatus('')
+  }
+
+  const signOut = async () => {
+    await supabase.auth.signOut()
   }
 
   if (!isAuthed) {
     return (
-      <main style={{ padding: 20 }}>
-        <h1>Производственный план</h1>
-        <p>Для работы необходимо войти</p>
+      <main style={{ padding: 20, maxWidth: 420 }}>
+        <h1>Вход</h1>
 
-        <button
-          onClick={() =>
-            supabase.auth.signInWithOAuth({
-              provider: 'google'
-            })
-          }
-        >
-          Войти
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <input
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={{ padding: 10 }}
+          />
+          <input
+            placeholder="Пароль"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={{ padding: 10 }}
+          />
+          <button onClick={signIn} style={{ padding: 10 }}>
+            Войти
+          </button>
+        </div>
+
+        {status && <p style={{ marginTop: 12 }}>{status}</p>}
       </main>
     )
   }
 
   return (
-    <main style={{ padding: 20, maxWidth: 600 }}>
+    <main style={{ padding: 20, maxWidth: 700 }}>
       <h1>Главная</h1>
 
-      <div style={{ marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         <Link href="/items">
           <button>Номенклатура</button>
         </Link>
+        <button onClick={signOut}>Выйти</button>
       </div>
 
       <h2>Станки</h2>
       <ul>
-        {machines.map(m => (
+        {machines.map((m) => (
           <li key={m.id}>
             <Link href={`/machine/${m.id}`}>{m.name}</Link>
           </li>
